@@ -7,15 +7,24 @@ Similar to https://github.com/hwsdien/gotcping and https://github.com/pjperez/go
     go get github.com/nemca/nemtcping
 
 ## Usage
-    nemtcping [-c count] [-t timeout] <host> [<port>]
+    nemtcping [-c count] [-t timeout] [-p] <host> [<port>]
 
 ### Defaults
-    -c     default to 4 requests
+    -c     default to 0 requests, forever ping loop
     -t     default to 1 seconds
     <port> default to 80
 
 ### Example
-    nemtcping -c 2 github.com 443
+
+#### Normal mode
+    $ nemtcping github.com 443
+    github.com port 443 open.
+    $ nemtcping -t 2 github.com 444
+    github.com port 444 closed.
+
+#### Ping mode
+    $ nemtcping -c 2 -p github.com 443
+    nemtcping github.com (192.30.253.113)
     Connected to github.com:443, RTT=145.301 ms
     Connected to github.com:443, RTT=135.903 ms
 
