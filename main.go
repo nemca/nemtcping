@@ -107,13 +107,13 @@ func main() {
 	addr := fmt.Sprintf("%s:%d", host, port)
 	_, err = net.DialTimeout("tcp", addr, time.Second*time.Duration(timeout))
 	if err != nil {
-		say(quiet, "%s port %d closed.\n", host, port)
+		say("%s port %d closed.\n", host, port)
 		os.Exit(1)
 	}
-	say(quiet, "%s port %d open.\n", host, port)
+	say("%s port %d open.\n", host, port)
 }
 
-func say(quiet bool, format string, a ...interface{}) {
+func say(format string, a ...interface{}) {
 	if !quiet {
 		fmt.Fprintf(os.Stdout, format, a...)
 	}
@@ -135,9 +135,9 @@ func ping(p *Ping, filename string, ip net.IP, done chan bool) {
 				_, err := net.DialTimeout("tcp", addr, time.Second*time.Duration(timeout))
 				responseTime := time.Since(timeStart)
 				if err != nil {
-					fmt.Println(fmt.Sprintf("Received timeout while connecting to %s on port %d.", p.Host, p.Port))
+					say("Received timeout while connecting to %s on port %d\n", p.Host, p.Port)
 				} else {
-					fmt.Println(fmt.Sprintf("Connected to %s:%d, RTT=%.3f ms", host, port, float32(responseTime)/1e6))
+					say("Connected to %s:%d, RTT=%.3f ms\n", host, port, float32(responseTime)/1e6)
 					p.SuccessfulProbes++
 					p.ResponseTimes = append(p.ResponseTimes, float64(responseTime))
 				}
@@ -150,9 +150,9 @@ func ping(p *Ping, filename string, ip net.IP, done chan bool) {
 			_, err := net.DialTimeout("tcp", addr, time.Second*time.Duration(timeout))
 			responseTime := time.Since(timeStart)
 			if err != nil {
-				fmt.Println(fmt.Sprintf("Received timeout while connecting to %s on port %d.", p.Host, p.Port))
+				say("Received timeout while connecting to %s on port %d\n", p.Host, p.Port)
 			} else {
-				fmt.Println(fmt.Sprintf("Connected to %s:%d, RTT=%.3f ms", host, port, float32(responseTime)/1e6))
+				say("Connected to %s:%d, RTT=%.3f ms\n", host, port, float32(responseTime)/1e6)
 				p.SuccessfulProbes++
 				p.ResponseTimes = append(p.ResponseTimes, float64(responseTime))
 			}

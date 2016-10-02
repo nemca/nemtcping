@@ -7,7 +7,7 @@ Similar to https://github.com/hwsdien/gotcping and https://github.com/pjperez/go
     go get github.com/nemca/nemtcping
 
 ## Usage
-    nemtcping [-c count] [-t timeout] [-p] <host> [<port>]
+    nemtcping [-c count] [-t timeout] [-p] [-q] <host> [<port>]
 
 ### Defaults
     -c     default to 0 requests, forever ping loop
