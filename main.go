@@ -23,13 +23,18 @@ func init() {
 	flag.IntVar(&timeout, "t", 1, "Timeout for each request, in seconds")
 }
 
+func usage(filename string) {
+	fmt.Printf("Usage: %s [-c count] [-t timeout] <host> [<port>]\n", filename)
+}
+
 func main() {
 	flag.Parse()
 
+	filename := os.Args[0]
 	args := flag.Args()
 
 	if len(args) < 1 {
-		fmt.Println("Usage: nemtcping [-c count] [-t timeout] <host> [<port>]")
+		usage(filename)
 		os.Exit(255)
 	}
 
@@ -41,10 +46,9 @@ func main() {
 	}
 
 	if len(args) == 2 {
-		if v, err := strconv.Atoi(args[1]); err == nil {
-			port = v
-		} else {
-			fmt.Println("Usage: nemtcping [-q] [-c count] [-t timeout] <host> [<port>]")
+		port, err = strconv.Atoi(args[1])
+		if err != nil || port < 1 || port > 65535 {
+			fmt.Printf("Argument [%s] was not correct, <port> must be a positive integer in the range 1 - 65535\n", args[1])
 			os.Exit(255)
 		}
 	}
