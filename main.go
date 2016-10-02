@@ -13,19 +13,21 @@ import (
 )
 
 var (
-	host    string
-	port    = 80
-	count   int
-	timeout int
+	host      string
+	port      = 80
+	count     int
+	timeout   int
+	ping_flag bool
 )
 
 func init() {
 	flag.IntVar(&count, "c", 4, "Number of requests to send")
 	flag.IntVar(&timeout, "t", 1, "Timeout for each request, in seconds")
+	flag.BoolVar(&ping_flag, "p", false, "Run ping")
 }
 
 func usage(filename string) {
-	fmt.Printf("Usage: %s [-c count] [-t timeout] <host> [<port>]\n", filename)
+	fmt.Printf("Usage: %s [-c count] [-t timeout] [-p] <host> [<port>]\n", filename)
 }
 
 func main() {
@@ -54,7 +56,9 @@ func main() {
 		}
 	}
 
-	ping(host, filename, port, count, timeout, ips[0])
+	if ping_flag {
+		ping(host, filename, port, count, timeout, ips[0])
+	}
 }
 
 func ping(host, filename string, port, count, timeout int, ip net.IP) {
