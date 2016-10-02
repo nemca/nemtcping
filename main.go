@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/montanaflynn/stats"
@@ -20,6 +22,16 @@ var (
 	ping_flag bool
 	quiet     bool
 )
+
+type Ping struct {
+	Host             string
+	Port             int
+	Timeout          int
+	Count            int
+	SuccessfulProbes int
+	ResponseTimes    []float64
+	Probes           int
+}
 
 func init() {
 	flag.IntVar(&count, "c", 0, "number of requests to send")
@@ -58,8 +70,37 @@ func main() {
 		}
 	}
 
+	sigs := make(chan os.Signal, 1)
+	done := make(chan bool, 1)
+
+	signal.Notify(sigs, syscall.SIGINT)
+
+	go func() {
+		<-sigs
+		fmt.Println()
+		done <- true
+	}()
+
 	if ping_flag {
-		ping(host, filename, port, count, timeout, ips[0])
+		p := &Ping{Host: host, Port: port, Timeout: timeout, Count: count}
+		ping(p, filename, ips[0], done)
+		var max float64
+		min := float64(1000000000 * timeout)
+		for _, v := range p.ResponseTimes {
+			if v > max {
+				max = v
+			}
+			if v < min {
+				min = v
+			}
+		}
+
+		avg, _ := stats.Median(p.ResponseTimes)
+
+		fmt.Printf("\n--- %s nemtcping statistic ---\n", p.Host)
+		fmt.Printf("%d packets transmitted, %d packets received, %.1f%% packet loss\n", p.Probes, p.SuccessfulProbes, float64(100-(p.SuccessfulProbes*100)/p.Probes))
+		fmt.Printf("round-trip min/avg/max = %.3f/%.3f/%.3f ms\n", float32(min)/1e6, float32(avg)/1e6, float32(max)/1e6)
+
 		os.Exit(0)
 	}
 
@@ -78,60 +119,45 @@ func say(quiet bool, format string, a ...interface{}) {
 	}
 }
 
-func ping(host, filename string, port, count, timeout int, ip net.IP) {
-	successfulProbes := 0
-	timeTotal := time.Duration(0)
-	addr := fmt.Sprintf("%s:%d", host, port)
-	var i int
-	var responseTimes []float64
+func ping(p *Ping, filename string, ip net.IP, done chan bool) {
+	addr := fmt.Sprintf("%s:%d", p.Host, p.Port)
+	// var i int
 
-	fmt.Printf("%s %s (%s)\n", filename, host, ip)
-	if count == 0 {
+	fmt.Printf("%s %s (%s)\n", filename, p.Host, ip)
+	if p.Count == 0 {
 		for {
-			timeStart := time.Now()
-			_, err := net.DialTimeout("tcp", addr, time.Second*time.Duration(timeout))
-			responseTime := time.Since(timeStart)
-			if err != nil {
-				fmt.Println(fmt.Sprintf("Received timeout while connecting to %s on port %d.", host, port))
-			} else {
-				fmt.Println(fmt.Sprintf("Connected to %s:%d, RTT=%.3f ms", host, port, float32(responseTime)/1e6))
-				timeTotal += responseTime
-				successfulProbes++
-				responseTimes = append(responseTimes, float64(responseTime))
+			select {
+			case <-done:
+				return
+			default:
+				p.Probes++
+				timeStart := time.Now()
+				_, err := net.DialTimeout("tcp", addr, time.Second*time.Duration(timeout))
+				responseTime := time.Since(timeStart)
+				if err != nil {
+					fmt.Println(fmt.Sprintf("Received timeout while connecting to %s on port %d.", p.Host, p.Port))
+				} else {
+					fmt.Println(fmt.Sprintf("Connected to %s:%d, RTT=%.3f ms", host, port, float32(responseTime)/1e6))
+					p.SuccessfulProbes++
+					p.ResponseTimes = append(p.ResponseTimes, float64(responseTime))
+				}
+				time.Sleep(time.Second - responseTime)
 			}
-			time.Sleep(time.Second - responseTime)
 		}
 	} else {
-		for i = 1; count >= i; i++ {
+		for ; p.Count > p.Probes; p.Probes++ {
 			timeStart := time.Now()
 			_, err := net.DialTimeout("tcp", addr, time.Second*time.Duration(timeout))
 			responseTime := time.Since(timeStart)
 			if err != nil {
-				fmt.Println(fmt.Sprintf("Received timeout while connecting to %s on port %d.", host, port))
+				fmt.Println(fmt.Sprintf("Received timeout while connecting to %s on port %d.", p.Host, p.Port))
 			} else {
 				fmt.Println(fmt.Sprintf("Connected to %s:%d, RTT=%.3f ms", host, port, float32(responseTime)/1e6))
-				timeTotal += responseTime
-				successfulProbes++
-				responseTimes = append(responseTimes, float64(responseTime))
+				p.SuccessfulProbes++
+				p.ResponseTimes = append(p.ResponseTimes, float64(responseTime))
 			}
 			time.Sleep(time.Second - responseTime)
 		}
 	}
 
-	var max float64
-	min := float64(1000000000 * timeout)
-	for _, v := range responseTimes {
-		if v > max {
-			max = v
-		}
-		if v < min {
-			min = v
-		}
-	}
-
-	avg, _ := stats.Median(responseTimes)
-
-	fmt.Printf("\n--- %s nemtcping statistic ---\n", host)
-	fmt.Printf("%d packets transmitted, %d packets received, %.1f%% packet loss\n", count, successfulProbes, float64(100-(successfulProbes*100)/(i-1)))
-	fmt.Printf("round-trip min/avg/max = %.3f/%.3f/%.3f ms\n", float32(min)/1e6, float32(avg)/1e6, float32(max)/1e6)
 }
