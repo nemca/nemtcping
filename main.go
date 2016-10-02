@@ -77,11 +77,11 @@ func ping(host, filename string, port, count, timeout int, ip net.IP) {
 			successfulProbes++
 			responseTimes = append(responseTimes, float64(responseTime))
 		}
-		time.Sleep(time.Second - responseTime)
+		time.Sleep(time.Second*time.Duration(timeout) - responseTime)
 	}
 
 	var max float64
-	min := float64(1000000000)
+	min := float64(1000000000 * timeout)
 	for _, v := range responseTimes {
 		if v > max {
 			max = v
