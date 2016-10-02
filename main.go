@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -30,7 +31,7 @@ func usage(filename string) {
 func main() {
 	flag.Parse()
 
-	filename := os.Args[0]
+	filename := filepath.Base(os.Args[0])
 	args := flag.Args()
 
 	if len(args) < 1 {
@@ -39,7 +40,7 @@ func main() {
 	}
 
 	host = args[0]
-	_, err := net.LookupIP(host)
+	ips, err := net.LookupIP(host)
 	if err != nil {
 		fmt.Println("error: unknown host")
 		os.Exit(2)
@@ -53,16 +54,17 @@ func main() {
 		}
 	}
 
-	ping(host, port, count, timeout)
+	ping(host, filename, port, count, timeout, ips[0])
 }
 
-func ping(host string, port, count, timeout int) {
+func ping(host, filename string, port, count, timeout int, ip net.IP) {
 	successfulProbes := 0
 	timeTotal := time.Duration(0)
 	addr := fmt.Sprintf("%s:%d", host, port)
-	i := 1
+	var i int
 	var responseTimes []float64
 
+	fmt.Printf("%s %s (%s)\n", filename, host, ip)
 	for i = 1; count >= i; i++ {
 		timeStart := time.Now()
 		_, err := net.DialTimeout("tcp", addr, time.Second*time.Duration(timeout))
