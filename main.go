@@ -18,16 +18,18 @@ var (
 	count     int
 	timeout   int
 	ping_flag bool
+	quiet     bool
 )
 
 func init() {
-	flag.IntVar(&count, "c", 4, "Number of requests to send")
-	flag.IntVar(&timeout, "t", 1, "Timeout for each request, in seconds")
-	flag.BoolVar(&ping_flag, "p", false, "Run ping")
+	flag.IntVar(&count, "c", 4, "number of requests to send")
+	flag.IntVar(&timeout, "t", 1, "timeout for each request, in seconds")
+	flag.BoolVar(&ping_flag, "p", false, "run ping")
+	flag.BoolVar(&quiet, "q", false, "quiet mode, do not output anything (except error messages)")
 }
 
 func usage(filename string) {
-	fmt.Printf("Usage: %s [-c count] [-t timeout] [-p] <host> [<port>]\n", filename)
+	fmt.Fprintf(os.Stderr, "Usage: %s [-c count] [-t timeout] [-p] <host> [<port>]\n", filename)
 }
 
 func main() {
@@ -44,20 +46,35 @@ func main() {
 	host = args[0]
 	ips, err := net.LookupIP(host)
 	if err != nil {
-		fmt.Println("error: unknown host")
+		fmt.Fprintf(os.Stderr, "error: unknown host")
 		os.Exit(2)
 	}
 
 	if len(args) == 2 {
 		port, err = strconv.Atoi(args[1])
 		if err != nil || port < 1 || port > 65535 {
-			fmt.Printf("Argument [%s] was not correct, <port> must be a positive integer in the range 1 - 65535\n", args[1])
+			fmt.Fprintf(os.Stderr, "Argument [%s] was not correct, <port> must be a positive integer in the range 1 - 65535\n", args[1])
 			os.Exit(255)
 		}
 	}
 
 	if ping_flag {
 		ping(host, filename, port, count, timeout, ips[0])
+		os.Exit(0)
+	}
+
+	addr := fmt.Sprintf("%s:%d", host, port)
+	_, err = net.DialTimeout("tcp", addr, time.Second*time.Duration(timeout))
+	if err != nil {
+		say(quiet, "%s port %d closed.\n", host, port)
+		os.Exit(1)
+	}
+	say(quiet, "%s port %d open.\n", host, port)
+}
+
+func say(quiet bool, format string, a ...interface{}) {
+	if !quiet {
+		fmt.Fprintf(os.Stdout, format, a...)
 	}
 }
 
