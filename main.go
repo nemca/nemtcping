@@ -22,7 +22,7 @@ var (
 )
 
 func init() {
-	flag.IntVar(&count, "c", 4, "number of requests to send")
+	flag.IntVar(&count, "c", 0, "number of requests to send")
 	flag.IntVar(&timeout, "t", 1, "timeout for each request, in seconds")
 	flag.BoolVar(&ping_flag, "p", false, "run ping")
 	flag.BoolVar(&quiet, "q", false, "quiet mode, do not output anything (except error messages)")
@@ -86,19 +86,36 @@ func ping(host, filename string, port, count, timeout int, ip net.IP) {
 	var responseTimes []float64
 
 	fmt.Printf("%s %s (%s)\n", filename, host, ip)
-	for i = 1; count >= i; i++ {
-		timeStart := time.Now()
-		_, err := net.DialTimeout("tcp", addr, time.Second*time.Duration(timeout))
-		responseTime := time.Since(timeStart)
-		if err != nil {
-			fmt.Println(fmt.Sprintf("Received timeout while connecting to %s on port %d.", host, port))
-		} else {
-			fmt.Println(fmt.Sprintf("Connected to %s:%d, RTT=%.3f ms", host, port, float32(responseTime)/1e6))
-			timeTotal += responseTime
-			successfulProbes++
-			responseTimes = append(responseTimes, float64(responseTime))
+	if count == 0 {
+		for {
+			timeStart := time.Now()
+			_, err := net.DialTimeout("tcp", addr, time.Second*time.Duration(timeout))
+			responseTime := time.Since(timeStart)
+			if err != nil {
+				fmt.Println(fmt.Sprintf("Received timeout while connecting to %s on port %d.", host, port))
+			} else {
+				fmt.Println(fmt.Sprintf("Connected to %s:%d, RTT=%.3f ms", host, port, float32(responseTime)/1e6))
+				timeTotal += responseTime
+				successfulProbes++
+				responseTimes = append(responseTimes, float64(responseTime))
+			}
+			time.Sleep(time.Second - responseTime)
 		}
-		time.Sleep(time.Second*time.Duration(timeout) - responseTime)
+	} else {
+		for i = 1; count >= i; i++ {
+			timeStart := time.Now()
+			_, err := net.DialTimeout("tcp", addr, time.Second*time.Duration(timeout))
+			responseTime := time.Since(timeStart)
+			if err != nil {
+				fmt.Println(fmt.Sprintf("Received timeout while connecting to %s on port %d.", host, port))
+			} else {
+				fmt.Println(fmt.Sprintf("Connected to %s:%d, RTT=%.3f ms", host, port, float32(responseTime)/1e6))
+				timeTotal += responseTime
+				successfulProbes++
+				responseTimes = append(responseTimes, float64(responseTime))
+			}
+			time.Sleep(time.Second - responseTime)
+		}
 	}
 
 	var max float64
