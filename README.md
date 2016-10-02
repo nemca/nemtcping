@@ -8,6 +8,8 @@ Similar to https://github.com/hwsdien/gotcping and https://github.com/pjperez/go
 
 ## Usage
     nemtcping [-c count] [-t timeout] [-p] [-q] <host> [<port>]
+    -p - ping mode
+    -q - quite output
 
 ### Defaults
     -c     default to 0 requests, forever ping loop
